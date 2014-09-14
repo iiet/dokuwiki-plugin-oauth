@@ -8,6 +8,8 @@
 
 // must be run within Dokuwiki
 if(!defined('DOKU_INC')) die();
+                var_dump($_SESSION);
+include_once(DOKU_INC.'lib/plugins/authmysql/auth.php');
 
 class auth_plugin_oauth extends auth_plugin_authplain {
 
@@ -50,12 +52,13 @@ class auth_plugin_oauth extends auth_plugin_authplain {
         if(!isset($servicename) && isset($session['oauth'])) {
             $servicename = $session['oauth'];
             // check if session data is still considered valid
-            if(($session['time'] >= time() - $conf['auth_security_timeout']) &&
-                ($session['buid'] == auth_browseruid())
-            ) {
+            if(($session['time'] >= time() - $conf['auth_security_timeout']))
+            // removed browser uuid verification
+             {
 
                 $_SERVER['REMOTE_USER'] = $session['user'];
                 $USERINFO               = $session['info'];
+
                 return true;
             }
         }
@@ -80,45 +83,45 @@ class auth_plugin_oauth extends auth_plugin_authplain {
                 }
 
                 // see if the user is known already
-                $user = $this->getUserByEmail($uinfo['mail']);
-                if($user) {
-                    $sinfo = $this->getUserData($user);
-                    // check if the user allowed access via this service
-                    if(!in_array($this->cleanGroup($servicename), $sinfo['grps'])) {
-                        msg(sprintf($this->getLang('authnotenabled'), $servicename), -1);
-                        return false;
-                    }
-                    $uinfo['user'] = $user;
-                    $uinfo['name'] = $sinfo['name'];
-                    $uinfo['grps'] = array_merge((array) $uinfo['grps'], $sinfo['grps']);
-                } else {
-                    // new user, create him - making sure the login is unique by adding a number if needed
-                    $user  = $uinfo['user'];
-                    $count = '';
-                    while($this->getUserData($user . $count)) {
-                        if($count) {
-                            $count++;
-                        } else {
-                            $count = 1;
-                        }
-                    }
-                    $user            = $user . $count;
-                    $uinfo['user']   = $user;
-                    $uinfo['grps']   = (array) $uinfo['grps'];
-                    $uinfo['grps'][] = $conf['defaultgroup'];
-                    $uinfo['grps'][] = $this->cleanGroup($servicename); // add service as group
+                // $user = $this->getUserByEmail($uinfo['mail']);
+                // if($user) {
+                //     $sinfo = $this->getUserData($user);
+                //     // check if the user allowed access via this service
+                //     if(!in_array($this->cleanGroup($servicename), $sinfo['grps'])) {
+                //         msg(sprintf($this->getLang('authnotenabled'), $servicename), -1);
+                //         return false;
+                //     }
+                //     $uinfo['user'] = $user;
+                //     $uinfo['name'] = $sinfo['name'];
+                //     $uinfo['grps'] = array_merge((array) $uinfo['grps'], $sinfo['grps']);
+                // } else {
+                //     // new user, create him - making sure the login is unique by adding a number if needed
+                //     $user  = $uinfo['user'];
+                //     $count = '';
+                //     while($this->getUserData($user . $count)) {
+                //         if($count) {
+                //             $count++;
+                //         } else {
+                //             $count = 1;
+                //         }
+                //     }
+                //     $user            = $user . $count;
+                //     $uinfo['user']   = $user;
+                $uinfo['grps']   = (array) $uinfo['grps'];
+                $uinfo['grps'][] = $conf['defaultgroup'];
+                $uinfo['grps'][] = $this->cleanGroup($servicename); // add service as group
 
-                    //FIXME we should call trigger_user_mod?
-                    $ok = $this->createUser($user, auth_pwgen($user), $uinfo['name'], $uinfo['mail'], $uinfo['grps']);
-                    if(!$ok) {
-                        msg('something went wrong creating your user account. please try again later.', -1);
-                        return false;
-                    }
+                //     //FIXME we should call trigger_user_mod?
+                //     $ok = $this->createUser($user, auth_pwgen($user), $uinfo['name'], $uinfo['mail'], $uinfo['grps']);
+                //     if(!$ok) {
+                //         msg('something went wrong creating your user account. please try again later.', -1);
+                //         return false;
+                //     }
 
-                    // send notification about the new user
-                    $subscription = new Subscription();
-                    $subscription->send_register($user, $uinfo['name'], $uinfo['mail']);
-                }
+                //     // send notification about the new user
+                //     $subscription = new Subscription();
+                //     $subscription->send_register($user, $uinfo['name'], $uinfo['mail']);
+                //}
 
                 // set user session
                 $this->setUserSession($uinfo, $servicename);
@@ -128,8 +131,17 @@ class auth_plugin_oauth extends auth_plugin_authplain {
             return false; // something went wrong during oAuth login
         }
 
-        // do the "normal" plain auth login via form
-        return auth_login($user, $pass, $sticky);
+        $authMysql = new auth_plugin_authmysql;
+        if($authMysql->checkPass($user,$pass)) {
+            $uinfo = $authMysql->getUserData($login);
+            $uinfo['user'] = $user;
+            $uinfo['grps']   = (array) $uinfo['grps'];
+            $uinfo['grps'][] = $conf['defaultgroup'];
+            $this->setUserSession($uinfo, 'mysql');
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**

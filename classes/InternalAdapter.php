@@ -15,7 +15,7 @@ namespace OAuth\Plugin;
  * @link https://github.com/doorkeeper-gem/doorkeeper
  * @package OAuth\Plugin
  */
-class DoorkeeperAdapter extends AbstractAdapter {
+class InternalAdapter extends AbstractAdapter {
 
     /**
      * Retrieve the user's data
@@ -29,11 +29,9 @@ class DoorkeeperAdapter extends AbstractAdapter {
         $data = array();
 
         /** var OAuth\OAuth2\Service\Generic $this->oAuth */
-        $result = $JSON->decode($this->oAuth->request('https://doorkeeper-provider.herokuapp.com/api/v1/me.json'));
-
-        $data['user'] = 'doorkeeper-'.$result['id'];
-        $data['name'] = 'doorkeeper-'.$result['id'];
-        $data['mail'] = $result['email'];
+        $result = $JSON->decode($this->oAuth->request('https://accounts.iiet.pl/appapi/v1/students/me?include_login=true'));
+        $data['mail'] = 'wiki+'.$result['user_id'].'@iiet.pl';
+        $data['user'] = $data['name'] = $result['login'];
 
         return $data;
     }
