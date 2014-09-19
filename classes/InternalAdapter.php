@@ -29,10 +29,23 @@ class InternalAdapter extends AbstractAdapter {
         $data = array();
 
         /** var OAuth\OAuth2\Service\Generic $this->oAuth */
-        $result = $JSON->decode($this->oAuth->request('https://accounts.iiet.pl/appapi/v1/students/me?include_login=true'));
-        $data['mail'] = 'wiki+'.$result['user_id'].'@iiet.pl';
-        $data['user'] = $data['name'] = $result['login'];
+        $result1 = $JSON->decode($this->oAuth->request('https://accounts.iiet.pl/appapi/v1/students/me'));
 
+        $data['user_id'] = $result1['user_id'];
+        
+
+        return $data;
+    }
+
+    public function getAdditionalUserData($data,$conf) {
+        $JSON = new \JSON(JSON_LOOSE_TYPE);
+
+        $result2 = $JSON->decode($this->oAuth->request($conf['plugin']['oauth']['internal-api-endpoint'].'/'.$data['user_id'].'?aid='.$conf['plugin']['oauth']['internal-api-aid'].'&authentication_token='.$conf['plugin']['oauth']['internal-api-token']));
+
+        $data['user'] = $result2['login'];
+        $data['name'] = $result2['name'];
+        $data['mail'] = $result2['email'];
+        $data['grps'] = $result2['group_names'];
         return $data;
     }
 

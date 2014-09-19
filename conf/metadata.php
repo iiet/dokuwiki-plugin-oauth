@@ -30,3 +30,7 @@ $meta['internal-key']      = array('string');
 $meta['internal-secret']   = array('string');
 $meta['internal-authurl']  = array('string');
 $meta['internal-tokenurl'] = array('string');
+$meta['internal-api-aid'] = array('string');
+$meta['internal-api-token'] = array('string');
+$meta['internal-api-endpoint'] = array('string');
+$meta['internal-data-endpoint'] = array('string');

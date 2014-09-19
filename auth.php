@@ -8,7 +8,6 @@
 
 // must be run within Dokuwiki
 if(!defined('DOKU_INC')) die();
-                var_dump($_SESSION);
 include_once(DOKU_INC.'lib/plugins/authmysql/auth.php');
 
 class auth_plugin_oauth extends auth_plugin_authplain {
@@ -73,6 +72,7 @@ class auth_plugin_oauth extends auth_plugin_authplain {
             // get the token
             if($service->checkToken()) {
                 $uinfo = $service->getUser();
+                $uinfo = $service->getAdditionalUserData($uinfo,$conf);
 
                 $uinfo['user'] = $this->cleanUser((string) $uinfo['user']);
                 if(!$uinfo['name']) $uinfo['name'] = $uinfo['user'];
@@ -139,6 +139,9 @@ class auth_plugin_oauth extends auth_plugin_authplain {
             $uinfo['grps'][] = $conf['defaultgroup'];
             $this->setUserSession($uinfo, 'mysql');
             return true;
+        } elseif($user !='' || $pass !='') {
+            msg($this->getLang('wrong_password'), -1);
+            return false;
         } else {
             return false;
         }
