@@ -133,7 +133,7 @@ class auth_plugin_oauth extends auth_plugin_authplain {
 
         $authMysql = new auth_plugin_authmysql;
         if($authMysql->checkPass($user,$pass)) {
-            $uinfo = $authMysql->getUserData($login);
+            $uinfo = $authMysql->getUserData($user);
             $uinfo['user'] = $user;
             $uinfo['grps']   = (array) $uinfo['grps'];
             $uinfo['grps'][] = $conf['defaultgroup'];
