@@ -123,6 +123,10 @@ class auth_plugin_oauth extends auth_plugin_authplain {
                 //     $subscription->send_register($user, $uinfo['name'], $uinfo['mail']);
                 //}
 
+                // set cookie for autologin
+                $cookieDir = empty($conf['cookiedir']) ? DOKU_REL : $conf['cookiedir'];
+                setcookie('oauth-autologin', $servicename, time()+60*60*24*365, $cookieDir, '', ($conf['securecookie'] && is_ssl()), true);
+
                 // set user session
                 $this->setUserSession($uinfo, $servicename);
                 return true;

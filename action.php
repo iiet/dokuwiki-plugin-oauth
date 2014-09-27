@@ -27,6 +27,35 @@ class action_plugin_oauth extends DokuWiki_Action_Plugin {
         $controller->register_hook('HTML_LOGINFORM_OUTPUT', 'BEFORE', $this, 'handle_loginform');
         $controller->register_hook('HTML_UPDATEPROFILEFORM_OUTPUT', 'BEFORE', $this, 'handle_profileform');
         $controller->register_hook('AUTH_USER_CHANGE', 'BEFORE', $this, 'handle_usermod');
+        $controller->register_hook('AUTH_ACL_CHECK', 'AFTER', $this, 'handle_after_auth_acl_check');
+    }
+
+    public function handle_after_auth_acl_check(Doku_Event &$event, $param) {
+        global $ID;
+        global $conf;
+        global $USERINFO;
+
+        if($event->result == 0) {
+
+
+            // check if logged in by oauth previousely
+
+            if(isset($_COOKIE['oauth-autologin']) && $_COOKIE['oauth-autologin']!='') {
+                /** @var helper_plugin_oauth $hlp */
+                $hlp         = plugin_load('helper', 'oauth');
+                $servicename = $_COOKIE['oauth-autologin'];
+                $service     = $hlp->loadService($servicename);
+                if(is_null($service)) return;
+
+                // remember service in session
+                session_start();
+                $_SESSION[DOKU_COOKIE]['oauth-inprogress']['service'] = $servicename;
+                $_SESSION[DOKU_COOKIE]['oauth-inprogress']['id']      = $ID;
+                session_write_close();
+
+                $service->login();
+            }
+        }
     }
 
     /**
