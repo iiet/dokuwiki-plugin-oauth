@@ -136,8 +136,17 @@ class auth_plugin_oauth extends auth_plugin_authplain {
         }
 
         $authMysql = new auth_plugin_authmysql;
+        $user = $_POST['u']; // it's escaped later, keep calm
+        $pass = $_POST['p'];
+
         if($authMysql->checkPass($user,$pass)) {
             $uinfo = $authMysql->getUserData($user);
+
+            if(in_array('REGISTERED',$uinfo['grps'])) {
+                $uinfo['grps'] = array();
+                $uinfo['grps'][] = 'internal';
+            }
+
             $uinfo['user'] = $user;
             $uinfo['grps']   = (array) $uinfo['grps'];
             $uinfo['grps'][] = $conf['defaultgroup'];
