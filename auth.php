@@ -141,22 +141,22 @@ class auth_plugin_oauth extends auth_plugin_authplain {
         $user = $_POST['u']; // it's escaped later, keep calm
         if(isset($_POST['p']))
         $pass = $_POST['p'];
-        if($authMysql->checkPass($user,$pass)) {
-            $uinfo = $authMysql->getUserData($user);
 
-            if(in_array('REGISTERED',$uinfo['grps'])) {
-                $uinfo['grps'] = array();
-                $uinfo['grps'][] = 'internal';
-            }
+        if($authMysql->checkPass($user,$pass)) {
+
+            $uinfo = $authMysql->getUserData($user);
 
             $uinfo['user'] = $user;
             $uinfo['grps']   = (array) $uinfo['grps'];
             $uinfo['grps'][] = $conf['defaultgroup'];
             $this->setUserSession($uinfo, 'mysql');
             //
-            $INPUT->server->set('REMOTE_USER', $user);
             $secret                 = auth_cookiesalt(!$sticky, true); //bind non-sticky to session
-            auth_setCookie($user, auth_encrypt($pass, $secret), $sticky);
+            // set cookie
+            $cookie    = base64_encode($user).'|'.((int) $sticky).'|'.base64_encode(auth_encrypt($pass, $secret));
+            $cookieDir = empty($conf['cookiedir']) ? DOKU_REL : $conf['cookiedir'];
+            $time      = $sticky ? (time() + 60 * 60 * 24 * 365) : 0; //one year
+            setcookie(DOKU_COOKIE, $cookie, $time, $cookieDir, '', ($conf['securecookie'] && is_ssl()), true);
             //
             return true;
         } elseif($user !='' || $pass !='') {
@@ -178,8 +178,9 @@ class auth_plugin_oauth extends auth_plugin_authplain {
                 ) {
 
                     // he has session, cookie and browser right - let him in
-                    $INPUT->server->set('REMOTE_USER', $user);
-                    $USERINFO               = $session['info']; //FIXME move all references to session
+                    //$INPUT->server->set('REMOTE_USER', $user);
+                    //$USERINFO               = $session['info']; //FIXME move all references to session
+                    $this->setUserSession($session['info'],'mysql');
                     return true;
                 }
                 // no we don't trust it yet - recheck pass but silent
@@ -204,6 +205,11 @@ class auth_plugin_oauth extends auth_plugin_authplain {
         // set up groups
         if(!is_array($data['grps'])) {
             $data['grps'] = array();
+        }
+        if(in_array('REGISTERED',$data['grps'])) {
+            $data['grps'] = array();
+            $data['grps'][] = 'internal';
+            $data['grps'][] = $conf['defaultgroup'];
         }
         $data['grps'][] = $this->cleanGroup($service);
         $data['grps']   = array_unique($data['grps']);
