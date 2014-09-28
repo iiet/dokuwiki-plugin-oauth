@@ -37,6 +37,7 @@ class auth_plugin_oauth extends auth_plugin_authplain {
     function trustExternal($user, $pass, $sticky = false) {
         global $conf;
         global $USERINFO;
+        global $INPUT;
 
         // are we in login progress?
         if(isset($_SESSION[DOKU_COOKIE]['oauth-inprogress'])) {
@@ -136,9 +137,10 @@ class auth_plugin_oauth extends auth_plugin_authplain {
         }
 
         $authMysql = new auth_plugin_authmysql;
+        if(isset($_POST['u']))
         $user = $_POST['u']; // it's escaped later, keep calm
+        if(isset($_POST['p']))
         $pass = $_POST['p'];
-
         if($authMysql->checkPass($user,$pass)) {
             $uinfo = $authMysql->getUserData($user);
 
@@ -151,12 +153,43 @@ class auth_plugin_oauth extends auth_plugin_authplain {
             $uinfo['grps']   = (array) $uinfo['grps'];
             $uinfo['grps'][] = $conf['defaultgroup'];
             $this->setUserSession($uinfo, 'mysql');
+            //
+            $INPUT->server->set('REMOTE_USER', $user);
+            $secret                 = auth_cookiesalt(!$sticky, true); //bind non-sticky to session
+            auth_setCookie($user, auth_encrypt($pass, $secret), $sticky);
+            //
             return true;
         } elseif($user !='' || $pass !='') {
             msg($this->getLang('wrong_password'), -1);
             return false;
         } else {
-            return false;
+            list($user, $sticky, $pass) = auth_getCookie();
+            if($user && $pass) {
+                // we got a cookie - see if we can trust it
+
+                // get session info
+                $session = $_SESSION[DOKU_COOKIE]['auth'];
+                if(isset($session) &&
+                    //$auth->useSessionCache($user) && WTF
+                    ($session['time'] >= time() - $conf['auth_security_timeout']) &&
+                    ($session['user'] == $user) &&
+                    ($session['pass'] == sha1($pass)) && //still crypted
+                    ($session['buid'] == auth_browseruid())
+                ) {
+
+                    // he has session, cookie and browser right - let him in
+                    $INPUT->server->set('REMOTE_USER', $user);
+                    $USERINFO               = $session['info']; //FIXME move all references to session
+                    return true;
+                }
+                // no we don't trust it yet - recheck pass but silent
+                $secret = auth_cookiesalt(!$sticky, true); //bind non-sticky to session
+                $pass   = auth_decrypt($pass, $secret);
+                return $this->trustExternal($user,$pass,$sticky);
+            } else {
+                return false;
+            }
+            
         }
     }
 
