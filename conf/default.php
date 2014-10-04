@@ -9,6 +9,7 @@ $conf['internal-key']      = '';
 $conf['internal-secret']   = '';
 $conf['internal-authurl']  = 'https://accounts.iiet.pl/oauth/authorize';
 $conf['internal-tokenurl'] = 'https://accounts.iiet.pl/oauth/token';
+$conf['internal-logouturl'] = 'https://accounts.iiet.pl/students/sign_out';
 $conf['internal-data-endpoint'] = 'https://accounts.iiet.pl/appapi/v1/students/me';
 $conf['internal-api-aid'] = '';
 $conf['internal-api-token'] = '';

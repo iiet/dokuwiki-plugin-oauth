@@ -28,6 +28,29 @@ class action_plugin_oauth extends DokuWiki_Action_Plugin {
         $controller->register_hook('HTML_UPDATEPROFILEFORM_OUTPUT', 'BEFORE', $this, 'handle_profileform');
         $controller->register_hook('AUTH_USER_CHANGE', 'BEFORE', $this, 'handle_usermod');
         $controller->register_hook('AUTH_ACL_CHECK', 'AFTER', $this, 'handle_after_auth_acl_check');
+        $controller->register_hook('ACTION_ACT_PREPROCESS', 'BEFORE', $this, 'logoutconvenience');
+    }
+    public function logoutconvenience(&$event,$param) {
+        global $ID;
+        global $ACT;
+        global $INFO;
+        global $conf;
+        //handle logout
+        if($ACT=='logout'){
+            $lockedby = checklock($ID); //page still locked?
+            if($lockedby == $_SERVER['REMOTE_USER']) {
+                unlock($ID); //try to unlock
+            }
+            $conf_key = strtolower($_SESSION[DOKU_COOKIE]['auth']['oauth'])."-logouturl";
+            auth_logoff();
+            $ID='start';
+            $INFO = pageinfo();
+            $ACT = 'show';
+
+            if($this->getConf($conf_key) != ''){
+                header('Location: '.$this->getConf($conf_key));
+            }
+        }
     }
 
     public function handle_after_auth_acl_check(Doku_Event &$event, $param) {
@@ -48,7 +71,7 @@ class action_plugin_oauth extends DokuWiki_Action_Plugin {
                 // remember service in session
                 session_start();
                 $_SESSION[DOKU_COOKIE]['oauth-inprogress']['service'] = $servicename;
-                $_SESSION[DOKU_COOKIE]['oauth-inprogress']['return-to'] = wl($ID,' ',true);
+                $_SESSION[DOKU_COOKIE]['oauth-inprogress']['return-to'] = wl($ID,'',true);
                 $_SESSION[DOKU_COOKIE]['oauth-inprogress']['id']      = $ID;
                 session_write_close();
 
