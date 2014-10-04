@@ -43,7 +43,9 @@ class auth_plugin_oauth extends auth_plugin_authplain {
         if(isset($_SESSION[DOKU_COOKIE]['oauth-inprogress'])) {
             $servicename = $_SESSION[DOKU_COOKIE]['oauth-inprogress']['service'];
             $page        = $_SESSION[DOKU_COOKIE]['oauth-inprogress']['id'];
-
+            if(isset($_SESSION[DOKU_COOKIE]['oauth-inprogress']['return-to'])) {
+                header('Location: '.$_SESSION[DOKU_COOKIE]['oauth-inprogress']['return-to']);
+            }
             unset($_SESSION[DOKU_COOKIE]['oauth-inprogress']);
         }
 

@@ -48,6 +48,7 @@ class action_plugin_oauth extends DokuWiki_Action_Plugin {
                 // remember service in session
                 session_start();
                 $_SESSION[DOKU_COOKIE]['oauth-inprogress']['service'] = $servicename;
+                $_SESSION[DOKU_COOKIE]['oauth-inprogress']['return-to'] = wl($ID,' ',true);
                 $_SESSION[DOKU_COOKIE]['oauth-inprogress']['id']      = $ID;
                 session_write_close();
 
