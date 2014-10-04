@@ -34,10 +34,8 @@ class action_plugin_oauth extends DokuWiki_Action_Plugin {
         global $ID;
         global $conf;
         global $USERINFO;
-
-        if($event->result == 0) {
-
-
+        global $ACT;
+        if($event->result == 0 && $ACT=='show') {
             // check if logged in by oauth previousely
 
             if(isset($_COOKIE['oauth-autologin']) && $_COOKIE['oauth-autologin']!='') {
