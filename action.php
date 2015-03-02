@@ -58,25 +58,22 @@ class action_plugin_oauth extends DokuWiki_Action_Plugin {
         global $conf;
         global $USERINFO;
         global $ACT;
+        
         if($event->result == 0 && $ACT=='show') {
-            // check if logged in by oauth previousely
+            /** @var helper_plugin_oauth $hlp */
+            $hlp         = plugin_load('helper', 'oauth');
+            $servicename = 'Internal';
+            $service     = $hlp->loadService($servicename);
+            if(is_null($service)) return;
+            file_put_contents('/tmp/act', $ACT, FILE_APPEND);
+            // remember service in session
+            session_start();
+            $_SESSION[DOKU_COOKIE]['oauth-inprogress']['service'] = $servicename;
+            $_SESSION[DOKU_COOKIE]['oauth-inprogress']['return-to'] = wl($ID,'',true);
+            $_SESSION[DOKU_COOKIE]['oauth-inprogress']['id']      = $ID;
+            session_write_close();
 
-            if(isset($_COOKIE['oauth-autologin']) && $_COOKIE['oauth-autologin']!='') {
-                /** @var helper_plugin_oauth $hlp */
-                $hlp         = plugin_load('helper', 'oauth');
-                $servicename = $_COOKIE['oauth-autologin'];
-                $service     = $hlp->loadService($servicename);
-                if(is_null($service)) return;
-
-                // remember service in session
-                session_start();
-                $_SESSION[DOKU_COOKIE]['oauth-inprogress']['service'] = $servicename;
-                $_SESSION[DOKU_COOKIE]['oauth-inprogress']['return-to'] = wl($ID,'',true);
-                $_SESSION[DOKU_COOKIE]['oauth-inprogress']['id']      = $ID;
-                session_write_close();
-
-                $service->login();
-            }
+            $service->login();
         }
     }
 
@@ -173,8 +170,8 @@ class action_plugin_oauth extends DokuWiki_Action_Plugin {
 
         /** @var Doku_Form $form */
         $form =& $event->data;
+        
         $pos  = $form->findElementByAttribute('type', 'submit');
-
         $services = $hlp->listServices();
         if(!$services) return;
 
@@ -220,8 +217,12 @@ class action_plugin_oauth extends DokuWiki_Action_Plugin {
 
         /** @var Doku_Form $form */
         $form =& $event->data;
-        $pos  = $form->findElementByType('closefieldset');
 
+        $pos  = $form->findElementByType('closefieldset');
+        for($i = 0; $i <= $pos; $i++) {
+             $form->replaceElement(0,NULL);
+        }
+        $pos = 0;
         $form->insertElement(++$pos, form_openfieldset(array('_legend' => $this->getLang('loginwith'), 'class' => 'plugin_oauth')));
         $form->insertElement(++$pos, $html);
         $form->insertElement(++$pos, form_closefieldset());

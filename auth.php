@@ -85,50 +85,9 @@ class auth_plugin_oauth extends auth_plugin_authplain {
                     return false;
                 }
 
-                // see if the user is known already
-                // $user = $this->getUserByEmail($uinfo['mail']);
-                // if($user) {
-                //     $sinfo = $this->getUserData($user);
-                //     // check if the user allowed access via this service
-                //     if(!in_array($this->cleanGroup($servicename), $sinfo['grps'])) {
-                //         msg(sprintf($this->getLang('authnotenabled'), $servicename), -1);
-                //         return false;
-                //     }
-                //     $uinfo['user'] = $user;
-                //     $uinfo['name'] = $sinfo['name'];
-                //     $uinfo['grps'] = array_merge((array) $uinfo['grps'], $sinfo['grps']);
-                // } else {
-                //     // new user, create him - making sure the login is unique by adding a number if needed
-                //     $user  = $uinfo['user'];
-                //     $count = '';
-                //     while($this->getUserData($user . $count)) {
-                //         if($count) {
-                //             $count++;
-                //         } else {
-                //             $count = 1;
-                //         }
-                //     }
-                //     $user            = $user . $count;
-                //     $uinfo['user']   = $user;
                 $uinfo['grps']   = (array) $uinfo['grps'];
                 $uinfo['grps'][] = $conf['defaultgroup'];
                 $uinfo['grps'][] = $this->cleanGroup($servicename); // add service as group
-
-                //     //FIXME we should call trigger_user_mod?
-                //     $ok = $this->createUser($user, auth_pwgen($user), $uinfo['name'], $uinfo['mail'], $uinfo['grps']);
-                //     if(!$ok) {
-                //         msg('something went wrong creating your user account. please try again later.', -1);
-                //         return false;
-                //     }
-
-                //     // send notification about the new user
-                //     $subscription = new Subscription();
-                //     $subscription->send_register($user, $uinfo['name'], $uinfo['mail']);
-                //}
-
-                // set cookie for autologin
-                $cookieDir = empty($conf['cookiedir']) ? DOKU_REL : $conf['cookiedir'];
-                setcookie('oauth-autologin', $servicename, time()+60*60*24*365, $cookieDir, '', ($conf['securecookie'] && is_ssl()), true);
 
                 // set user session
                 $this->setUserSession($uinfo, $servicename);
@@ -137,63 +96,7 @@ class auth_plugin_oauth extends auth_plugin_authplain {
 
             return false; // something went wrong during oAuth login
         }
-
-        $authMysql = new auth_plugin_authmysql;
-        if(isset($_POST['u']))
-        $user = $_POST['u']; // it's escaped later, keep calm
-        if(isset($_POST['p']))
-        $pass = $_POST['p'];
-
-        if($authMysql->checkPass($user,$pass)) {
-
-            $uinfo = $authMysql->getUserData($user);
-
-            $uinfo['user'] = $user;
-            $uinfo['grps']   = (array) $uinfo['grps'];
-            $uinfo['grps'][] = $conf['defaultgroup'];
-            $this->setUserSession($uinfo, 'mysql');
-            //
-            $secret                 = auth_cookiesalt(!$sticky, true); //bind non-sticky to session
-            // set cookie
-            $cookie    = base64_encode($user).'|'.((int) $sticky).'|'.base64_encode(auth_encrypt($pass, $secret));
-            $cookieDir = empty($conf['cookiedir']) ? DOKU_REL : $conf['cookiedir'];
-            $time      = $sticky ? (time() + 60 * 60 * 24 * 365) : 0; //one year
-            setcookie(DOKU_COOKIE, $cookie, $time, $cookieDir, '', ($conf['securecookie'] && is_ssl()), true);
-            //
-            return true;
-        } elseif($user !='' || $pass !='') {
-            msg($this->getLang('wrong_password'), -1);
-            return false;
-        } else {
-            list($user, $sticky, $pass) = auth_getCookie();
-            if($user && $pass) {
-                // we got a cookie - see if we can trust it
-
-                // get session info
-                $session = $_SESSION[DOKU_COOKIE]['auth'];
-                if(isset($session) &&
-                    //$auth->useSessionCache($user) && WTF
-                    ($session['time'] >= time() - $conf['auth_security_timeout']) &&
-                    ($session['user'] == $user) &&
-                    ($session['pass'] == sha1($pass)) && //still crypted
-                    ($session['buid'] == auth_browseruid())
-                ) {
-
-                    // he has session, cookie and browser right - let him in
-                    //$INPUT->server->set('REMOTE_USER', $user);
-                    //$USERINFO               = $session['info']; //FIXME move all references to session
-                    $this->setUserSession($session['info'],'mysql');
-                    return true;
-                }
-                // no we don't trust it yet - recheck pass but silent
-                $secret = auth_cookiesalt(!$sticky, true); //bind non-sticky to session
-                $pass   = auth_decrypt($pass, $secret);
-                return $this->trustExternal($user,$pass,$sticky);
-            } else {
-                return false;
-            }
-            
-        }
+        return false;
     }
 
     /**
